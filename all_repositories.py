@@ -47,13 +47,9 @@ class Github_Api_Repos(object):
         try:
             r = requests.get(url)
         except requests.exceptions.ConnectionError, e:
-            self.logger.debug(e)
-            s = raw_input(">"*80+
-                    "\nPlease check your network and make sure it is available!(Y to continue and N to stop):"
-                    ).strip()[0].capitalize()
-            if s == 'N':
-                assert 1==2, "Stop executing this code"
-            self.make_request(url)
+            self.logger.debug({"url": url, "ConnectionError": e})
+            self.logger.debug("Please check your network and make sure it is available!")
+            return self.make_request(url)
         self.logger.info("link: %s, status:%d"
                 % (r.url, r.status_code))
         self.status_col.insert({"request_url":r.url, "status": r.status_code})
