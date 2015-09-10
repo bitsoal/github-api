@@ -5,7 +5,7 @@
 
 import requests, logging, threading
 from pymongo import MongoClient
-import time, libxml2dom,re
+import time
 
 class Github_Api_Repos(object):
 
@@ -22,9 +22,11 @@ class Github_Api_Repos(object):
         return col, col1
 
     def continue_(self):
-        docs = list(self.col.find())
-        ids = [doc["id"] for doc in docs]
-        return max(ids) if ids else 0
+        _id = 0
+        cur = self.col.find()
+        for doc in cur:
+            _id = _id if _id >= doc["_id"] else doc["_id"]
+        return _id
 
     def request_repos(self):
         self.url = self.url.split("=")[0] + "=" + str(self.start_id)
@@ -35,20 +37,24 @@ class Github_Api_Repos(object):
                     +" limit for requests-60 times per hour-is approached.")
             return True
         elif items:
+            for item in items:
+                item["_id"] = item["id"]
+                del item["id"]
             self.col.insert(items)
             self.logger.info("%d repositories whose ids are between %d and %d are captured"
-                    % (len(items), items[0]["id"], items[-1]['id']))
-            self.start_id = items[-1]["id"]
+                    % (len(items), items[0]["_id"], items[-1]['_id']))
+            self.start_id = items[-1]["_id"]
             return self.request_repos()
         else:
+            self.logger.info(">>>>>>no repos will be extracted<<<<<<<")
             return None
 
     def make_request(self, url):
         try:
             r = requests.get(url)
         except requests.exceptions.ConnectionError, e:
-            self.logger.debug({"url": url, "ConnectionError": e})
-            self.logger.debug("Please check your network and make sure it is available!")
+            self.logger.debug({"url": url, "ConnectionError": e, "possible_solution":
+                "Please check your network and make sure it is available!"})
             return self.make_request(url)
         self.logger.info("link: %s, status:%d"
                 % (r.url, r.status_code))
